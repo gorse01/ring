@@ -86,6 +86,7 @@
 </head>
 <body>
 <div class="glow"></div>
+<div class="yt-hidden" id="yt-persistent-player"></div>
 <div class="wrap" id="app"></div>
 <script>
 const M=[
@@ -179,29 +180,29 @@ function hdr(){return`<header><div class="kicker">Der Ring des Nibelungen</div><
 function ytEmbed(v){const s=`https://www.youtube.com/embed/${v}?modestbranding=1&rel=0&playsinline=1&fs=0&iv_load_policy=3`;return`<div class="yt-wrap"><iframe src="${s}" allow="autoplay; encrypted-media" allowfullscreen></iframe></div>`}
 
 // ── YouTube IFrame API for quiz mode (hidden player, no title leak) ──
-let ytReady=false,ytPlayer=null,ytPlaying=false,ytLoaded=false;
+let ytReady=false,ytPlayer=null,ytPlaying=false,ytLoaded=false,ytCurrentVid=null;
 function loadYTAPI(){
   if(ytReady||document.getElementById('yt-api'))return;
   const tag=document.createElement('script');tag.id='yt-api';tag.src='https://www.youtube.com/iframe_api';
   document.head.appendChild(tag);
 }
-window.onYouTubeIframeAPIReady=function(){ytReady=true;if(S.scr==='quiz')initQuizPlayer()}
+window.onYouTubeIframeAPIReady=function(){ytReady=true;if(S.scr==='quiz')initQuizPlayer(S.qs[S.qi].m.v)}
 
 function destroyQuizPlayer(){
   if(ytPlayer){try{ytPlayer.destroy()}catch(e){}}
-  ytPlayer=null;ytPlaying=false;ytLoaded=false;
-  const el=document.getElementById('yt-hidden-wrap');if(el)el.innerHTML='';
+  ytPlayer=null;ytPlaying=false;ytLoaded=false;ytCurrentVid=null;
+  const el=document.getElementById('yt-persistent-player');if(el)el.innerHTML='';
 }
 
-function initQuizPlayer(){
-  if(!ytReady||S.scr!=='quiz'||!S.qs.length)return;
+function initQuizPlayer(videoId){
+  if(!ytReady)return;
   destroyQuizPlayer();
-  const wrap=document.getElementById('yt-hidden-wrap');
+  const wrap=document.getElementById('yt-persistent-player');
   if(!wrap)return;
   wrap.innerHTML='<div id="yt-api-player"></div>';
-  const q=S.qs[S.qi];
+  ytCurrentVid=videoId;
   ytPlayer=new YT.Player('yt-api-player',{
-    height:'1',width:'1',videoId:q.m.v,
+    height:'1',width:'1',videoId:videoId,
     playerVars:{autoplay:0,controls:0,disablekb:1,fs:0,modestbranding:1,rel:0,playsinline:1},
     events:{
       onReady:function(){ytLoaded=true;updatePlayBtn()},
@@ -214,10 +215,12 @@ function initQuizPlayer(){
 }
 
 function loadQuizVideo(vid){
-  if(!ytPlayer||!ytLoaded){initQuizPlayer();return}
+  if(!ytReady){loadYTAPI();return}
+  if(!ytPlayer||!ytLoaded){initQuizPlayer(vid);return}
+  if(ytCurrentVid===vid)return;
+  ytCurrentVid=vid;
   ytPlaying=false;
-  ytPlayer.loadVideoById(vid);
-  ytPlayer.pauseVideo();
+  ytPlayer.cueVideoById(vid);
   updatePlayBtn();
 }
 
@@ -306,13 +309,12 @@ function drawQuiz(){
     <button class="play-btn loading" id="quiz-play-btn" onclick="togglePlay()">…</button>
   </div>
   <p class="audio-status" id="quiz-status">Loading audio…</p>
-  <div class="yt-hidden" id="yt-hidden-wrap"></div>
   <div style="height:8px"></div>
   <div class="opts">${os}</div>${ex}</div>`;
 
-  // Init or load video
-  if(ytReady&&ytPlayer&&ytLoaded){loadQuizVideo(q.m.v)}
-  else if(ytReady){initQuizPlayer()}
+  // Load video into persistent player
+  if(ytReady&&ytPlayer&&ytLoaded){loadQuizVideo(q.m.v);updatePlayBtn()}
+  else if(ytReady){initQuizPlayer(q.m.v)}
   else{loadYTAPI()}
 }
 
@@ -347,7 +349,8 @@ function startQuiz(){
     const opts=shuffle([m,...w.slice(0,3)]);
     return{m,opts,ci:opts.findIndex(o=>o.id===m.id)};
   });
-  destroyQuizPlayer();
+  // Reset video tracking so first question loads fresh
+  ytCurrentVid=null;
   set({scr:'quiz',qs,qi:0,sel:null,show:false,score:0,hist:[]});
 }
 function startLearn(){set({scr:'learn',li:0})}
