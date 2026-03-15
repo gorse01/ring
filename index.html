@@ -41,9 +41,14 @@
   .major-star{color:var(--gold-bright);margin-left:4px}
   .yt-wrap{position:relative;width:100%;max-width:400px;margin:0 auto 10px;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:6px;border:1px solid var(--border);background:#000}
   .yt-wrap iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:none}
-  .yt-quiz{position:relative;width:100%;max-width:400px;margin:0 auto 10px;height:54px;overflow:hidden;border-radius:4px;border:1px solid var(--border);background:#000}
-  .yt-quiz iframe{position:absolute;bottom:0;left:0;width:100%;height:250px;border:none}
-  .yt-hint{font-size:12px;color:var(--text-dim);text-align:center;margin-bottom:4px}
+  .yt-hidden{position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;overflow:hidden;pointer-events:none}
+  .audio-ctrl{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 auto 14px;max-width:300px}
+  .play-btn{width:68px;height:68px;border-radius:50%;border:2px solid var(--gold);background:radial-gradient(circle at 40% 35%,rgba(160,130,90,.2),rgba(160,130,90,.05));color:var(--gold-bright);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s ease;flex-shrink:0}
+  .play-btn:hover{border-color:var(--gold-bright);background:radial-gradient(circle at 40% 35%,rgba(160,130,90,.3),rgba(160,130,90,.1))}
+  .play-btn.playing{animation:pulse 1.2s ease-in-out infinite;border-color:var(--gold-bright);background:rgba(160,130,90,.15)}
+  .play-btn.loading{opacity:.4;cursor:default}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .audio-status{font-size:13px;color:var(--text-dim);text-align:center;margin-bottom:6px}
   .progress{display:flex;align-items:center;gap:12px;margin-bottom:26px}
   .progress-track{flex:1;height:2px;background:var(--border);border-radius:1px;overflow:hidden}
   .progress-fill{height:100%;background:var(--gold);border-radius:1px;transition:width .5s ease}
@@ -171,10 +176,73 @@ function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=0|Math.random
 function pool(){let f=M;if(S.filter)f=f.filter(m=>m.o===S.filter);if(S.xOnly)f=f.filter(m=>m.x);return f}
 
 function hdr(){return`<header><div class="kicker">Der Ring des Nibelungen</div><h1>Leitmotif Ear Training</h1><div class="rule"></div><p class="tagline">${M.length} motifs · orchestral recordings · Grange Park Opera</p></header>`}
-function yt(v,q){const s=`https://www.youtube.com/embed/${v}?modestbranding=1&rel=0&playsinline=1&fs=0&iv_load_policy=3`;return q?`<div class="yt-quiz"><iframe src="${s}" allow="autoplay; encrypted-media" allowfullscreen></iframe></div><p class="yt-hint">Tap the play bar to listen</p>`:`<div class="yt-wrap"><iframe src="${s}" allow="autoplay; encrypted-media" allowfullscreen></iframe></div>`}
+function ytEmbed(v){const s=`https://www.youtube.com/embed/${v}?modestbranding=1&rel=0&playsinline=1&fs=0&iv_load_policy=3`;return`<div class="yt-wrap"><iframe src="${s}" allow="autoplay; encrypted-media" allowfullscreen></iframe></div>`}
+
+// ── YouTube IFrame API for quiz mode (hidden player, no title leak) ──
+let ytReady=false,ytPlayer=null,ytPlaying=false,ytLoaded=false;
+function loadYTAPI(){
+  if(ytReady||document.getElementById('yt-api'))return;
+  const tag=document.createElement('script');tag.id='yt-api';tag.src='https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+}
+window.onYouTubeIframeAPIReady=function(){ytReady=true;if(S.scr==='quiz')initQuizPlayer()}
+
+function destroyQuizPlayer(){
+  if(ytPlayer){try{ytPlayer.destroy()}catch(e){}}
+  ytPlayer=null;ytPlaying=false;ytLoaded=false;
+  const el=document.getElementById('yt-hidden-wrap');if(el)el.innerHTML='';
+}
+
+function initQuizPlayer(){
+  if(!ytReady||S.scr!=='quiz'||!S.qs.length)return;
+  destroyQuizPlayer();
+  const wrap=document.getElementById('yt-hidden-wrap');
+  if(!wrap)return;
+  wrap.innerHTML='<div id="yt-api-player"></div>';
+  const q=S.qs[S.qi];
+  ytPlayer=new YT.Player('yt-api-player',{
+    height:'1',width:'1',videoId:q.m.v,
+    playerVars:{autoplay:0,controls:0,disablekb:1,fs:0,modestbranding:1,rel:0,playsinline:1},
+    events:{
+      onReady:function(){ytLoaded=true;updatePlayBtn()},
+      onStateChange:function(e){
+        ytPlaying=(e.data===YT.PlayerState.PLAYING);
+        updatePlayBtn();
+      }
+    }
+  });
+}
+
+function loadQuizVideo(vid){
+  if(!ytPlayer||!ytLoaded){initQuizPlayer();return}
+  ytPlaying=false;
+  ytPlayer.loadVideoById(vid);
+  ytPlayer.pauseVideo();
+  updatePlayBtn();
+}
+
+function togglePlay(){
+  if(!ytPlayer||!ytLoaded)return;
+  if(ytPlaying){ytPlayer.pauseVideo()}else{ytPlayer.playVideo()}
+}
+
+function stopQuizAudio(){
+  if(ytPlayer&&ytLoaded){try{ytPlayer.pauseVideo()}catch(e){}}
+  ytPlaying=false;
+}
+
+function updatePlayBtn(){
+  const btn=document.getElementById('quiz-play-btn');
+  if(!btn)return;
+  btn.className='play-btn'+(ytPlaying?' playing':'')+((!ytLoaded)?' loading':'');
+  btn.innerHTML=!ytLoaded?'…':ytPlaying?'■':'▶';
+  const lbl=document.getElementById('quiz-status');
+  if(lbl)lbl.textContent=!ytLoaded?'Loading audio…':ytPlaying?'Playing — tap to pause':'Tap to play';
+}
 
 function drawMenu(){
   const p=pool(),mx=Math.min(S.qLen,p.length);
+  destroyQuizPlayer();
   app.innerHTML=`${hdr()}<div class="screen" style="display:flex;flex-direction:column;gap:14px">
   <div style="margin-bottom:4px">
     <div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px">Quiz settings</div>
@@ -198,6 +266,7 @@ function drawMenu(){
 }
 
 function drawLearn(){
+  destroyQuizPlayer();
   const p=pool(),m=p[S.li]||p[0],i=p.indexOf(m);
   app.innerHTML=`${hdr()}<div class="screen">
   <button class="back-link" onclick="set({scr:'menu',li:0})">← Back</button>
@@ -213,7 +282,7 @@ function drawLearn(){
   <div class="card">
     <div class="motif-num">MOTIF ${m.id}${m.x?'<span class="major-star">★</span>':''}</div>
     <h2>${m.n}</h2>
-    ${yt(m.v,false)}
+    ${ytEmbed(m.v)}
     <p class="desc">${m.d}</p>
   </div>
   <div class="row">
@@ -233,11 +302,22 @@ function drawQuiz(){
   app.innerHTML=`${hdr()}<div class="screen">
   <div class="progress"><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><span class="progress-n">${S.qi+1}/${S.qs.length}</span></div>
   <h2 class="question">Which leitmotif is this?</h2>
-  ${yt(q.m.v,true)}<div style="height:14px"></div>
+  <div class="audio-ctrl">
+    <button class="play-btn loading" id="quiz-play-btn" onclick="togglePlay()">…</button>
+  </div>
+  <p class="audio-status" id="quiz-status">Loading audio…</p>
+  <div class="yt-hidden" id="yt-hidden-wrap"></div>
+  <div style="height:8px"></div>
   <div class="opts">${os}</div>${ex}</div>`;
+
+  // Init or load video
+  if(ytReady&&ytPlayer&&ytLoaded){loadQuizVideo(q.m.v)}
+  else if(ytReady){initQuizPlayer()}
+  else{loadYTAPI()}
 }
 
 function drawResults(){
+  destroyQuizPlayer();
   const pct=Math.round(S.score/S.qs.length*100);
   const rk=pct===100?'Brünnhilde — you hear every thread':pct>=80?'Wotan — deep knowledge, a few blind spots':pct>=60?'Siegfried — bold but still learning':pct>=40?'Mime — you know pieces, not the whole':'Rhinemaiden — the gold awaits discovery';
   const em=pct>=80?'🔥':pct>=60?'⚔':pct>=40?'♪':'🌊';
@@ -257,6 +337,7 @@ function drawResults(){
 function draw(){({menu:drawMenu,learn:drawLearn,quiz:drawQuiz,results:drawResults})[S.scr]();window.scrollTo(0,0)}
 
 function startQuiz(){
+  loadYTAPI();
   const p=pool();if(p.length<2)return;
   const n=Math.min(S.qLen,p.length),ch=shuffle(p).slice(0,n);
   const qs=ch.map(m=>{
@@ -266,13 +347,14 @@ function startQuiz(){
     const opts=shuffle([m,...w.slice(0,3)]);
     return{m,opts,ci:opts.findIndex(o=>o.id===m.id)};
   });
+  destroyQuizPlayer();
   set({scr:'quiz',qs,qi:0,sel:null,show:false,score:0,hist:[]});
 }
 function startLearn(){set({scr:'learn',li:0})}
 function lP(){if(S.li>0)set({li:S.li-1})}
 function lN(){const p=pool();if(S.li<p.length-1)set({li:S.li+1})}
-function ans(i){if(S.sel!==null)return;const q=S.qs[S.qi],ok=i===q.ci;set({sel:i,show:true,score:S.score+(ok?1:0),hist:[...S.hist,{ok,n:q.m.n}]})}
-function nxt(){if(S.qi+1>=S.qs.length)set({scr:'results'});else set({qi:S.qi+1,sel:null,show:false})}
+function ans(i){if(S.sel!==null)return;stopQuizAudio();const q=S.qs[S.qi],ok=i===q.ci;set({sel:i,show:true,score:S.score+(ok?1:0),hist:[...S.hist,{ok,n:q.m.n}]})}
+function nxt(){stopQuizAudio();if(S.qi+1>=S.qs.length)set({scr:'results'});else set({qi:S.qi+1,sel:null,show:false})}
 
 draw();
 </script>
