@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Wagner Ring — Leitmotif Ear Training</title>
+<title>Woodbird — Learn the Leitmotifs of Wagner's Ring</title>
 <meta name="description" content="Learn and quiz yourself on all 123 leitmotifs of Wagner's Ring Cycle with real orchestral recordings.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -229,7 +229,7 @@ function set(p){Object.assign(S,p);draw()}
 function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=0|Math.random()*(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
 function pool(){let f=M;if(S.filter)f=f.filter(m=>m.o===S.filter);if(S.xOnly)f=f.filter(m=>m.x);return f}
 
-function hdr(){return`<header><div class="kicker">Der Ring des Nibelungen</div><h1>Leitmotif Ear Training</h1><div class="rule"></div><p class="tagline">${M.length} motifs · orchestral recordings</p></header>`}
+function hdr(){return`<header><div class="kicker">Der Ring des Nibelungen</div><h1>Woodbird</h1><div class="rule"></div><p style="font-size:16px;color:var(--text-muted);margin:0 0 8px;line-height:1.6">Learn and test yourself on the leitmotifs of Wagner's Ring Cycle with real orchestral recordings.</p><p class="tagline" style="margin-bottom:6px">${M.length} leitmotifs · four operas</p><p style="font-size:12px;color:rgba(160,130,90,0.4);font-style:italic;margin:0">'Du holdes Vöglein, dich hört' ich noch nie'</p></header>`}
 function ytEmbed(v){const s=`https://www.youtube.com/embed/${v}?modestbranding=1&rel=0&playsinline=1&fs=0&iv_load_policy=3`;return`<div class="yt-wrap"><iframe src="${s}" allow="autoplay; encrypted-media" allowfullscreen></iframe></div>`}
 
 // ── YouTube IFrame API for quiz mode (hidden player, no title leak) ──
@@ -414,5 +414,10 @@ function nxt(){stopQuizAudio();if(S.qi+1>=S.qs.length)set({scr:'results'});else 
 
 draw();
 </script>
+<footer style="max-width:640px;margin:40px auto 20px;padding:0 20px;text-align:center;font-family:'Cormorant Garamond',Garamond,Georgia,serif;font-size:12px;line-height:1.7;color:rgba(140,120,100,0.22)">
+  Audio from the <a href="https://www.youtube.com/playlist?list=PL78TsyiiZjhGNl-civwjVsk_7tn6XG3wh" style="color:rgba(140,120,100,0.3);text-decoration:none" target="_blank">Wagner Leitmotifs</a> YouTube channel. Musical material by Richard Wagner (1813–1883), public domain. Leitmotif descriptions adapted from <a href="https://grangeparkopera.co.uk/ring-leitmotifs/" style="color:rgba(140,120,100,0.3);text-decoration:none" target="_blank">Grange Park Opera</a>. Non-commercial educational project.
+  <br>
+  <a href="https://x.com/luxarbo" style="color:rgba(160,130,90,0.35);text-decoration:none" target="_blank">Follow @luxarbo for updates</a>
+</footer>
 </body>
 </html>
