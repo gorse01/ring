@@ -356,6 +356,7 @@ function drawQuiz(){
   }).join('');
   let ex='';if(r)ex=`<div class="expl"><strong>${q.m.n}</strong> — ${q.m.d}</div><button class="btn primary" style="margin-top:14px;text-align:center" onclick="nxt()">${S.qi+1>=S.qs.length?'See Results':'Next Motif →'}</button>`;
   app.innerHTML=`${hdr()}<div class="screen">
+  <button class="back-link" onclick="stopQuizAudio();destroyQuizPlayer();set({scr:'menu'})">← Quit quiz</button>
   <div class="progress"><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><span class="progress-n">${S.qi+1}/${S.qs.length}</span></div>
   <h2 class="question">Which leitmotif is this?</h2>
   <div class="audio-ctrl">
